@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peta Sebaran Stasiun Hujan Kota Bandung</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        
+        .info {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        /* CSS untuk Legenda */
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-size: 12px;
+            min-width: 160px;
+        }
+
+        .legend h4 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .legend-color.red { background-color: #e74c3c; }
+        .legend-color.orange { background-color: #e67e22; }
+        .legend-color.green { background-color: #27ae60; }
+        .legend-color.gray { background-color: #95a5a6; }
+
+        .legend-symbol {
+        font-size: 16px;
+        margin-right: 8px;
+        width: 20px;
+        text-align: center;
+        }
+
+        .legend-line {
+        width: 30px;
+        height: 3px;
+        margin-right: 8px;
+    }
+
+    .legend-line.blue { background-color: #3498db; }
+    .legend-line.green { background-color: #27ae60; }
+
+    /* Tambahan CSS Kustom untuk Kotak Pencarian (Modif-5) */
+.search-container {
+    background: white;
+    padding: 6px;
+    border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+}
+
+.search-container input {
+    width: 180px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.search-container input:focus {
+    outline: none;
+    border-color: #3498db;
+}
+    </style>
+</head>
+<body>
+    <h1>Peta Sebaran Stasiun Hujan & Curah Hujan Bandung</h1>
+    <div class="info">
+        <strong> Informasi:</strong> Klik pada marker stasiun hujan untuk melihat data curah hujan.
+    </div>
+    <div id="map"></div>
+    
+     <!-- Legenda -->
+    <div class="legend">
+        <h4>Legenda Curah Hujan</h4>
+        <div class="legend-item">
+            <div class="legend-color red"></div>
+            <span>Tinggi (> 2.500 mm/thn)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color orange"></div>
+            <span>Sedang (2.100 - 2.500 mm/thn)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color green"></div>
+            <span>Rendah (< 2.100 mm/thn)</span>
+        </div>
+    </div>
+
+    <script>
+        // Inisialisasi peta
+        var map = L.map('map').setView([-6.9175, 107.6191], 12);
+        
+        // Tambahkan tile layer (peta dasar)
+        // Modifikasi 4: basemap dan layer control
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        var googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            attribution: '&copy; Google Maps',
+            maxZoom: 19,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        });
+        
+        var googleTerrain = L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
+            attribution: '&copy; Google Maps',
+            maxZoom: 19,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        });
+        
+        var baseMaps = {
+            "OpenStreetMap": osmLayer,
+            "Google Satellite": googleSatellite,
+            "Google Terrain": googleTerrain
+        };
+        L.control.layers(baseMaps).addTo(map);
+        
+        // Tambahkan scale bar
+        L.control.scale({
+            metric: true,
+            imperial: false
+        }).addTo(map);
+        
+        // Pindahkan kontrol zoom ke kiri bawah
+        map.zoomControl.setPosition('bottomleft');
+
+      // Data stasiun hujan (contoh)
+      var stasiunHujan = [
+          { name: "🌊 Stasiun Hujan Gedebage",
+        lat: -6.9439,
+        lng: 107.7082,
+        rainfall: 2150 },
+          { name: "🌊 Stasiun Hujan Dayeuhkolot",
+        lat: -6.9794,
+        lng: 107.6183,
+        rainfall: 2080 },
+          { name: "🌊 Stasiun Hujan Lembang",
+        lat: -6.8126,
+            lng: 107.6156,
+            rainfall: 1250 },
+            { name: "🌊 Stasiun Hujan Cimahi",
+            lat: -6.8722,
+            lng: 107.5423,
+            rainfall: 2200 },
+            { name: "🌊 Stasiun Hujan Ujungberung",
+            lat: -6.9050,
+            lng: 107.6850,
+            rainfall: 2100 },
+        ];
+        
+       // Fungsi untuk menentukan warna marker berdasarkan curah hujan
+    function getMarkerColor(rainfall, status) {
+    if (rainfall > 2500) return '#e74c3c';  // Merah - curah hujan tinggi
+    if (rainfall >= 2100) return '#e67e22'; // Oranye - curah hujan sedang
+    return '#27ae60';  // Hijau - curah hujan rendah
+}
+
+// Loop untuk menambahkan marker
+var markersList = [];
+
+    stasiunHujan.forEach(function(stasiun) {
+    var markerColor = getMarkerColor(stasiun.rainfall);
+    
+    // Buat marker dengan icon kustom
+    var marker = L.marker([stasiun.lat, stasiun.lng]).addTo(map);
+    
+    // Popup
+    var popupContent = `
+        <div style="min-width: 250px; font-family: Arial;">
+            <h3 style="color: ${markerColor};">${stasiun.name}</h3>
+            <hr>
+            <table style="width: 100%; font-size: 14px;">
+                <tr><td><strong>Curah Hujan Tahunan</strong></td><td>${stasiun.rainfall} mm/thn</td></tr>
+            </table>
+            <hr>
+            <a href="https://www.google.com/maps/search/?api=1&query=${stasiun.lat},${stasiun.lng}" 
+               target="_blank">🗺️ Buka lokasi di Google Maps</a>
+        </div>
+    `;
+    marker.bindPopup(popupContent);
+    
+    // Tooltip (hover)
+    var tooltipText = `${stasiun.name} | ${stasiun.rainfall} mm/thn`;
+    marker.bindTooltip(tooltipText, { permanent: false, direction: 'top' });
+    
+    // Simpan referensi marker untuk pencarian
+    markersList.push({ 
+        marker: marker, 
+        name: stasiun.name.toLowerCase(), 
+        lat: stasiun.lat, 
+        lng: stasiun.lng,
+        rainfall: stasiun.rainfall
+    });
+});
+
+        console.log('Peta berhasil dimuat!');
+
+        // ===================================================
+// Tambahan Skrip Fitur Pencarian di Pojok Kiri Atas
+// ===================================================
+var SearchControl = L.Control.extend({
+    options: {
+        position: 'topleft' // Meletakkan kotak di pojok kiri atas peta
+    },
+    onAdd: function (map) {
+        // Pembuatan elemen HTML container dan input secara dinamis
+        var container = L.DomUtil.create('div', 'search-container');
+        var input = L.DomUtil.create('input', '', container);
+        input.type = 'text';
+        input.placeholder = 'Cari stasiun hujan..'; // Placeholder sesuai perintah soal
+        
+        // Mengunci event klik/scroll agar tidak tembus menggeser peta dasar
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.disableScrollPropagation(container);
+        
+        // Deteksi sinyal saat menekan tombol di keyboard
+        L.DomEvent.on(input, 'keypress', function(e) {
+            if (e.keyCode === 13) { // Angka 13 melambangkan tombol 'Enter'
+                var query = input.value.toLowerCase().trim();
+                var found = false;
+                
+                if (query === "") return;
+
+                // Perulangan untuk mencocokkan input dengan data stasiun
+                for (var i = 0; i < markersList.length; i++) {
+                    if (markersList[i].name.includes(query)) {
+                        var targetMarker = markersList[i].marker;
+                        
+                        // Aksi zoom ke lokasi koordinat stasiun (Zoom level: 15) dan buka popupnya
+                        map.setView([markersList[i].lat, markersList[i].lng], 15);
+                        targetMarker.openPopup();
+                        
+                        found = true;
+                        break; // Berhenti mencari jika sudah ketemu
+                    }
+                }
+                
+                // Menampilkan alert bawaan jika nama stasiun tidak ditemukan
+                if (!found) {
+                    alert("Stasiun hujan tidak ditemukan");
+                }
+            }
+        });
+        
+        return container;
+    }
+});
+
+// Perintah wajib untuk mengaktifkan elemen kontrol baru ke dalam peta
+map.addControl(new SearchControl());
+    </script>
+</body>
+</html>
